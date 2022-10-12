@@ -4,5 +4,5 @@ import io.geekya215.algorithm_w.type.Type;
 
 import java.util.List;
 
-record _Scheme(List<String> vars, Type t) implements Scheme {
+public record _Scheme(List<String> vars, Type t) implements Scheme {
 }

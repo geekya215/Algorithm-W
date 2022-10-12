@@ -7,7 +7,7 @@ import java.util.Set;
 
 public sealed interface Scheme permits _Scheme {
 
-//  ftv (Scheme vars t) = (ftv t) \ (Set.fromList vars)
+    //  ftv (Scheme vars t) = (ftv t) \ (Set.fromList vars)
     default Set<String> ftv() {
         return switch (this) {
             case _Scheme scheme -> {
@@ -18,7 +18,7 @@ public sealed interface Scheme permits _Scheme {
         };
     }
 
-//  apply s (Scheme vars t) = Scheme vars (apply (foldr Map.delete s vars) t)
+    //  apply s (Scheme vars t) = Scheme vars (apply (foldr Map.delete s vars) t)
     default Scheme apply(Map<String, Type> subst) {
         return switch (this) {
             case _Scheme scheme -> {

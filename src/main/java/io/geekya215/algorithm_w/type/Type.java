@@ -9,10 +9,10 @@ import java.util.Set;
 //           = TFun Type Type
 public sealed interface Type permits TBool, TFun, TInt, TVar {
 
-//  ftv (TVar n) = {n}
-//  ftv TInt = ∅
-//  ftv TBool = ∅
-//  ftv (TFun t1 t2 ) = ftv t1 ∪ ftv t2
+    //  ftv (TVar n) = {n}
+    //  ftv TInt = ∅
+    //  ftv TBool = ∅
+    //  ftv (TFun t1 t2 ) = ftv t1 ∪ ftv t2
     default Set<String> ftv() {
         return switch (this) {
             case TVar tVar -> Set.of(tVar.x());
@@ -27,11 +27,12 @@ public sealed interface Type permits TBool, TFun, TInt, TVar {
             }
         };
     }
-//  apply s (TVar n) = case Map.lookup n s of
-//                      Nothing → TVar n
-//                      Just t → t
-//  apply s (TFun t1 t2 ) = TFun (apply s t1 ) (apply s t2 )
-//  apply s t = t
+
+    //  apply s (TVar n) = case Map.lookup n s of
+    //                      Nothing → TVar n
+    //                      Just t → t
+    //  apply s (TFun t1 t2 ) = TFun (apply s t1 ) (apply s t2 )
+    //  apply s t = t
     default Type apply(Map<String, Type> subst) {
         return switch (this) {
             case TVar tVar -> {
