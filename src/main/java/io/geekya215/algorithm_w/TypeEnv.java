@@ -5,6 +5,8 @@ import io.geekya215.algorithm_w.type.Type;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 public record TypeEnv(Map<String, Scheme> env) {
     //  remove :: TypeEnv → String → TypeEnv
@@ -27,8 +29,10 @@ public record TypeEnv(Map<String, Scheme> env) {
     }
 
     TypeEnv apply(Map<String, Type> subst) {
-        env.forEach((k, v) -> env.replace(k, v.apply(subst)));
-        return new TypeEnv(env);
+        var res = env.entrySet()
+            .stream()
+            .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue().apply(subst)));
+        return new TypeEnv(res);
     }
 
 }
