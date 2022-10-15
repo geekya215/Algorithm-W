@@ -5,6 +5,9 @@ import io.geekya215.algorithm_w.type.Type;
 import java.util.Map;
 import java.util.Set;
 
+// instance Types Scheme where
+//    ftv (Scheme vars t) =  Set.difference (ftv t) (Set.fromList vars)
+//    apply s (Scheme vars t) = Scheme vars (apply (foldr Map.delete s vars) t)
 public sealed interface Scheme permits _Scheme {
     default Set<String> ftv() {
         return switch (this) {

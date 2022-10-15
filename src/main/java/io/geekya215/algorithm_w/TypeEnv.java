@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+// instance Types TypeEnv where
+//    ftv (TypeEnv env) = ftv (Map.elems env)
+//    apply s (TypeEnv env) = TypeEnv (Map.map (apply s) env)
 public record TypeEnv(Map<String, Scheme> env) {
     Set<String> ftv() {
         return env.values().stream()

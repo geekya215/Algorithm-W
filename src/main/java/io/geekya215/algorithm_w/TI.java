@@ -21,10 +21,19 @@ import static io.geekya215.algorithm_w.Utils.*;
 public class TI {
     static Integer counter = 0;
 
+    //  newTyVar :: String -> TI Type
+    //  newTyVar prefix = do
+    //    s <- get
+    //    _ <- put s{counter = counter s + 1}
+    //    return (TVar (prefix ++ show (counter s)))
     public static Type newTyVar(String prefix) {
         return new TVar(prefix + counter++);
     }
 
+    //  instantiate :: Scheme -> TI Type
+    //  instantiate (Scheme vars t) = do
+    //    nvars <- mapM (\_ -> newTyVar "a") vars
+    //    return $ apply (Map.fromList (zip vars nvars)) t
     public static Type instantiate(Scheme scheme) {
         return switch (scheme) {
             case _Scheme _scheme -> {
@@ -37,6 +46,16 @@ public class TI {
         };
     }
 
+    //  mgu :: Type -> Type -> TI Subst
+    //  mgu (TFun l r) (TFun l' r') = do
+    //    s1 <- mgu l l'
+    //    s2 <- mgu (apply s1 r) (apply s1 r')
+    //    return (s1 `composeSubst` s2)
+    //  mgu (TVar u) t = varBind u t
+    //  mgu t (TVar u) = varBind u t
+    //  mgu TInt TInt = return nullSubst
+    //  mgu TBool TBool = return nullSubst
+    //  mgu t1 t2 = throwError $ "types do not unify: " ++ show t1 ++ " vs. " ++ show t2
     public static Map<String, Type> mgu(Type t1, Type t2) throws Exception {
         if (t1 instanceof TFun _t1 && t2 instanceof TFun _t2) {
             var l = _t1.t1();
@@ -68,6 +87,10 @@ public class TI {
 
     }
 
+    //  varBind :: String -> Type -> TI Subst
+    //  varBind u t | t == TVar u = return nullSubst
+    //              | u `Set.member` ftv t = throwError $ "occur check fails: " ++ u ++ " vs. " ++ show t
+    //              | otherwise = return (Map.singleton u t)
     public static Map<String, Type> varBind(String x, Type t) throws Exception {
         if (t instanceof TVar _t && _t.x() == x) {
             return nullSubst();
@@ -82,13 +105,24 @@ public class TI {
         return res;
     }
 
+    //  tiLit :: TypeEnv -> Lit -> TI(Subst, Type)
+    //  tiLit _ (LInt _) = return (nullSubst, TInt)
+    //  tiLit _ (LBool _) = return (nullSubst, TBool)
     public static Pair<Map<String, Type>, Type> tiLit(TypeEnv typeEnv, Lit lit) {
         return switch (lit) {
             case LBool lBool -> new Pair<>(nullSubst(), new TBool());
             case LInt lInt -> new Pair<>(nullSubst(), new TInt());
         };
     }
+
+    //  ti :: TypeEnv -> Exp -> TI (Subst,Type)
     public static Pair<Map<String, Type>, Type> ti(TypeEnv typeEnv, Expr expr) throws Exception {
+        //  ti (TypeEnv env) (EVar n) =
+        //    case Map.lookup n env of
+        //        Nothing -> throwError $ "unbound variable: " ++ n
+        //        Just sigma -> do
+        //            t <- instantiate sigma
+        //            return (nullSubst,t)
         if (expr instanceof EVar _e) {
             var env = typeEnv.env();
             var n = _e.x();
@@ -101,18 +135,24 @@ public class TI {
             }
         }
 
+        //  ti env (ELit l) = tiLit env l
         if (expr instanceof ELit _e) {
             return tiLit(typeEnv, _e.x());
         }
 
+        //  ti env (EAbs n e) = do
+        //    tv <- newTyVar "a"
+        //    let TypeEnv env' = remove env n
+        //        env'' = TypeEnv (env' `Map.union` (Map.singleton n (Scheme [] tv)))
+        //    (s1,t1) <- ti env'' e
+        //    return (s1, TFun (apply s1 tv) t1)
         if (expr instanceof EAbs _e) {
             var n = _e.x();
             var e = _e.e();
             var tv = newTyVar("a");
             var _typeEnv = remove(typeEnv, n);
+            // maybe should use immutable list?
             _typeEnv.env().put(n, new _Scheme(new ArrayList<>(), tv));
-            // maybe should use mutable list?
-//            _env.env().putAll(Map.of(n, new _Scheme(new ArrayList<>(), tv)));
             var __typeEnv = new TypeEnv(_typeEnv.env());
             var pair = ti(__typeEnv, e);
             var s1 = pair.fst();
@@ -120,6 +160,12 @@ public class TI {
             return new Pair<>(s1, new TFun(tv.apply(s1), t1));
         }
 
+        //  ti env (EApp e1 e2) = do
+        //    tv <- newTyVar "a"
+        //    (s1,t1) <- ti env e1
+        //    (s2,t2) <- ti (apply s1 env) e2
+        //    s3 <- mgu (apply s2 t1) (TFun t2 tv)
+        //    return (s3 `composeSubst` s2 `composeSubst` s1, apply s3 tv)
         if (expr instanceof EApp _e) {
             var e1 = _e.e1();
             var e2 = _e.e2();
@@ -134,6 +180,14 @@ public class TI {
             return new Pair<>(composeSubst(s3, composeSubst(s2, s1)), tv.apply(s3));
         }
 
+        //  ti env (ELet x e1 e2) = do
+        //    (s1,t1) <- ti env e1
+        //    let TypeEnv env'= remove env x
+        //        t' = generalize (apply s1 env) t1
+        //        env''= TypeEnv (Map.insert x t' env')
+        //        TypeEnv tt = env''
+        //    (s2,t2) <- ti (apply s1 env'') e2
+        //    return (s1 `composeSubst` s2,t2)
         if (expr instanceof ELet _e) {
             var x = _e.x();
             var e1 = _e.e1();
@@ -152,6 +206,10 @@ public class TI {
         throw new Exception("unknown type inference");
     }
 
+    //  typeInference :: Map.Map String Scheme -> Exp -> TI Type
+    //  typeInference env e = do
+    //    (s,t) <- ti (TypeEnv env) e
+    //    return (apply s t)
     public static Type typeInference(Map<String, Scheme> env, Expr expr) throws Exception {
         var pair = ti(new TypeEnv(env), expr);
         var s = pair.fst();

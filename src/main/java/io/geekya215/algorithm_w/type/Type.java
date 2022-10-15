@@ -4,6 +4,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+// instance Types Type where
+//    ftv (TVar n) = Set.singleton n
+//    ftv TInt = Set.empty
+//    ftv TBool = Set.empty
+//    ftv (TFun t1 t2) = Set.union (ftv t1) (ftv t2)
+//    apply s (TVar n) = case Map.lookup n s of
+//                        Nothing -> TVar n
+//                        Just t -> t
+//    apply s (TFun t1 t2) = TFun (apply s t1) (apply s t2)
+//    apply s t = t
 public sealed interface Type permits TBool, TFun, TInt, TVar {
     default Set<String> ftv() {
         return switch (this) {
@@ -39,5 +49,4 @@ public sealed interface Type permits TBool, TFun, TInt, TVar {
             case TInt tInt -> this;
         };
     }
-
 }
