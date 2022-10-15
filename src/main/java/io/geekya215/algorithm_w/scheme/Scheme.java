@@ -6,19 +6,18 @@ import java.util.Map;
 import java.util.Set;
 
 public sealed interface Scheme permits _Scheme {
-
-    //  ftv (Scheme vars t) = (ftv t) \ (Set.fromList vars)
     default Set<String> ftv() {
         return switch (this) {
             case _Scheme scheme -> {
-                var t = scheme.ftv();
-                scheme.vars().forEach(t::remove);
-                yield t;
+                var vars = scheme.vars();
+                var t = scheme.t();
+                var res = t.ftv();
+                vars.forEach(res::remove);
+                yield res;
             }
         };
     }
 
-    //  apply s (Scheme vars t) = Scheme vars (apply (foldr Map.delete s vars) t)
     default Scheme apply(Map<String, Type> subst) {
         return switch (this) {
             case _Scheme scheme -> {
